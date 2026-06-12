@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  predictor-app:
+    build: .
+    container_name: worldcup-predictor-app
+    ports:
+      - "5005:5005"
+    volumes:
+      - worldcup_data:/data
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite:////data/predictor.db
+      # You can override other environment configs from .env here if needed:
+      # - SECRET_KEY=super_secret_world_cup_predictor_key_123456789
+
+volumes:
+  worldcup_data:
