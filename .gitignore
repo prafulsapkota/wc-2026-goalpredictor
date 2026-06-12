@@ -160,3 +160,12 @@ Thumbs.db
 *.db
 *.sqlite
 /data/
+
+#coading agents file
+CLAUDE.md
+
+#tar files
+*.tar
+
+#documents
+docs/
