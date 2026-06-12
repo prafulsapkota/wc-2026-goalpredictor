@@ -118,23 +118,6 @@ worldcup/
 4.  **Persistent Database**:
     Docker compose maps a named volume `worldcup_data` to `/data` in the container. The database file `predictor.db` will persist even if the container is rebuilt or stopped.
 
-5.  **🌐 Hosting via Cloudflare Tunnel**:
-    To host the application from your laptop securely without opening router ports:
-    *   Go to your [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/).
-    *   Navigate to **Networks** -> **Tunnels** and create a new tunnel.
-    *   Under **Choose environment**, select **Docker** and copy the token from the provided docker run command (the string after `--token`).
-    *   Add this token to your local [.env](file:///home/prafulsapkota/worldcup/.env) file:
-        ```ini
-        CLOUDFLARE_TUNNEL_TOKEN=your_copied_token
-        ```
-    *   Under **Public Hostname** in Cloudflare, map your domain (e.g. `predictor.yourdomain.com`) to:
-        *   **Service Type**: `HTTP`
-        *   **URL**: `predictor-app:5005` (using the docker-compose service name)
-    *   Start/Restart the compose setup:
-        ```bash
-        docker-compose up -d
-        ```
-
 ---
 
 ## ⚙️ Configuration
