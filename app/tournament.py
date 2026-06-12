@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 import urllib.request
 import json
@@ -49,6 +49,26 @@ SEMIFINAL_PROGRESSION = {
     102: {"winner": (104, "away"), "loser": (103, "away")},
 }
 
+# Timezone offsets for the 16 Host Stadiums of the 2026 World Cup (in June/July)
+STADIUM_UTCOFFSETS = {
+    "1": -6,   # Estadio Azteca (Mexico City, CST UTC-6)
+    "2": -6,   # Estadio Akron (Guadalajara, CST UTC-6)
+    "3": -6,   # Estadio BBVA (Monterrey, CST UTC-6)
+    "4": -5,   # AT&T Stadium (Dallas, CDT UTC-5)
+    "5": -5,   # NRG Stadium (Houston, CDT UTC-5)
+    "6": -5,   # GEHA Field at Arrowhead Stadium (Kansas City, CDT UTC-5)
+    "7": -4,   # Mercedes-Benz Stadium (Atlanta, EDT UTC-4)
+    "8": -4,   # Hard Rock Stadium (Miami, EDT UTC-4)
+    "9": -4,   # Gillette Stadium (Boston, EDT UTC-4)
+    "10": -4,  # Lincoln Financial Field (Philadelphia, EDT UTC-4)
+    "11": -4,  # MetLife Stadium (New York/New Jersey, EDT UTC-4)
+    "12": -4,  # BMO Field (Toronto, EDT UTC-4)
+    "13": -7,  # BC Place (Vancouver, PDT UTC-7)
+    "14": -7,  # Lumen Field (Seattle, PDT UTC-7)
+    "15": -7,  # Levi's Stadium (San Francisco Bay Area, PDT UTC-7)
+    "16": -7,  # SoFi Stadium (Los Angeles, PDT UTC-7)
+}
+
 def sync_matches_from_api(db: Session):
     """Fetch 2026 World Cup matches from the API and sync them to the database."""
     url = "https://worldcup26.ir/get/games"
@@ -91,8 +111,13 @@ def sync_matches_from_api(db: Session):
         local_date_str = game.get("local_date", "")
         try:
             kickoff = datetime.strptime(local_date_str, "%m/%d/%Y %H:%M")
+            # Convert local venue time to UTC
+            stadium_id = game.get("stadium_id")
+            if stadium_id:
+                offset = STADIUM_UTCOFFSETS.get(str(stadium_id), 0)
+                kickoff = kickoff - timedelta(hours=offset)
         except Exception:
-            kickoff = datetime.now()
+            kickoff = datetime.now(timezone.utc).replace(tzinfo=None)
             
         # Parse teams and placeholders
         home_team = game.get("home_team_name_en")
@@ -338,3 +363,19 @@ def score_predictions_for_match(db: Session, match: models.Match):
             pred.points_earned = 0   # Off by 3 or more
             
     db.commit()
+
+
+def compute_prediction_status(match: models.Match, current_time: datetime) -> str:
+    """Determine match prediction status: open, locked, completed."""
+    if match.status == "completed":
+        return "completed"
+    
+    # Check if teams are confirmed for knockout rounds
+    if not match.home_team or not match.away_team:
+        return "locked"
+        
+    # Locked 15 minutes before kickoff
+    if match.kickoff_time - current_time < timedelta(minutes=15):
+        return "locked"
+        
+    return "open"

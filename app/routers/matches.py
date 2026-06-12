@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
-from app import database, models, schemas, crud, auth
+from app import database, models, schemas, crud, auth, tournament
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
 
 def get_current_time():
-    """Helper to consistently get local time for kickoff comparisons."""
-    return datetime.now()
+    """Helper to consistently get UTC time for kickoff comparisons."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 def get_optional_user(token: Optional[str] = Depends(auth.oauth2_scheme), db: Session = Depends(database.get_db)) -> Optional[models.User]:
     if not token:
@@ -25,18 +25,7 @@ def get_optional_user(token: Optional[str] = Depends(auth.oauth2_scheme), db: Se
 
 def compute_prediction_status(match: models.Match, current_time: datetime) -> str:
     """Determine match prediction status: open, locked, completed."""
-    if match.status == "completed":
-        return "completed"
-    
-    # Check if teams are confirmed for knockout rounds
-    if not match.home_team or not match.away_team:
-        return "locked"
-        
-    # Locked 15 minutes before kickoff
-    if match.kickoff_time - current_time < timedelta(minutes=15):
-        return "locked"
-        
-    return "open"
+    return tournament.compute_prediction_status(match, current_time)
 
 @router.get("", response_model=List[schemas.MatchResponse])
 def get_matches_endpoint(

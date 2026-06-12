@@ -1,6 +1,13 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
-from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field, PlainSerializer
+from typing import Optional, List, Annotated
+from datetime import datetime, timezone
+
+def serialize_datetime(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        return dt.isoformat() + "Z"
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+UTCDateTime = Annotated[datetime, PlainSerializer(serialize_datetime, return_type=str)]
 
 # --- User Schemas ---
 class UserCreate(BaseModel):
@@ -17,7 +24,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
     is_admin: bool
-    created_at: datetime
+    created_at: UTCDateTime
 
     class Config:
         from_attributes = True
@@ -43,8 +50,8 @@ class PredictionResponse(BaseModel):
     predicted_home_goals: int
     predicted_away_goals: int
     points_earned: Optional[int] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: UTCDateTime
+    updated_at: UTCDateTime
 
     class Config:
         from_attributes = True
@@ -57,7 +64,7 @@ class PredictionDetail(BaseModel):
     away_team: Optional[str] = None
     home_placeholder: Optional[str] = None
     away_placeholder: Optional[str] = None
-    kickoff_time: datetime
+    kickoff_time: UTCDateTime
     home_score: Optional[int] = None
     away_score: Optional[int] = None
     predicted_goals: int
@@ -77,7 +84,7 @@ class MatchResponse(BaseModel):
     away_team: Optional[str] = None
     home_placeholder: Optional[str] = None
     away_placeholder: Optional[str] = None
-    kickoff_time: datetime
+    kickoff_time: UTCDateTime
     home_score: Optional[int] = None
     away_score: Optional[int] = None
     status: str

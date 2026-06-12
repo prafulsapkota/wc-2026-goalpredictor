@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from app import database, models, schemas, crud, auth
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 def get_current_time():
-    return datetime.now()
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 @router.get("/profile", response_model=schemas.UserProfileResponse)
 def get_user_profile(
@@ -48,6 +48,8 @@ def get_user_profile(
             home_score=match.home_score,
             away_score=match.away_score,
             predicted_goals=pred.predicted_goals,
+            predicted_home_goals=pred.predicted_home_goals,
+            predicted_away_goals=pred.predicted_away_goals,
             points_earned=pred.points_earned,
             status=pred_status
         )

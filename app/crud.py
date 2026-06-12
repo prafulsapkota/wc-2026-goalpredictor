@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app import models, schemas, auth
@@ -57,7 +57,7 @@ def create_or_update_prediction(db: Session, user_id: int, match_id: int, predic
         pred.predicted_home_goals = predicted_home_goals
         pred.predicted_away_goals = predicted_away_goals
         pred.predicted_goals = predicted_goals
-        pred.updated_at = datetime.now()
+        pred.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         pred = models.Prediction(
             user_id=user_id,

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import random
+from datetime import datetime, timezone
 from app import database, models, schemas, auth, tournament
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -95,7 +96,7 @@ def update_match_score(
     db.refresh(match)
     
     # Format and return response
-    current_time = datetime.now()
+    current_time = datetime.now(timezone.utc).replace(tzinfo=None)
     pred_status = tournament.compute_prediction_status(match, current_time)
     
     m_dict = schemas.MatchResponse.model_validate(match)
