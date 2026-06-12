@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   predictor-app:
     build: .
@@ -13,6 +11,16 @@ services:
       - DATABASE_URL=sqlite:////data/predictor.db
       # You can override other environment configs from .env here if needed:
       # - SECRET_KEY=super_secret_world_cup_predictor_key_123456789
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: worldcup-cloudflare-tunnel
+    restart: unless-stopped
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - predictor-app
 
 volumes:
   worldcup_data:
