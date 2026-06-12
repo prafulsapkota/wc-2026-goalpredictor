@@ -34,9 +34,10 @@ const Store = {
     // Set property value and trigger listeners
     set(property, newValue) {
         const oldValue = this._state[property];
-        // Only update if value changed (shallow check, works for primitives and reference updates)
+        // Skip if value is unchanged (strict equality works for primitives + same refs)
+        if (newValue === oldValue) return;
         this._state[property] = newValue;
-        
+
         if (this._listeners[property]) {
             this._listeners[property].forEach(callback => {
                 try {
@@ -62,6 +63,16 @@ const FLAGS = {
 };
 const getFlag = (team) => team ? (FLAGS[team] || "⚽") : "🏳️";
 
+// Trailing-edge debounce helper
+function debounce(fn, wait) {
+    let t;
+    return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), wait);
+    };
+}
+const debouncedSetSearch = debounce((v) => Store.set('searchQuery', v), 150);
+
 // Mini win probability calculator
 function getMatchStats(m) {
     const seed = m.id * 17;
@@ -78,10 +89,10 @@ function getMatchStats(m) {
 // ==========================================================================
 
 // A. Token Listener: handles app/auth view toggles and triggers data fetches
-Store.subscribe('token', async (token) => {
+async function handleAuthState(token) {
     const authSec = document.getElementById('auth-section');
     const appSec = document.getElementById('app-section');
-    
+
     if (!token) {
         localStorage.removeItem('token');
         Store.set('user', null);
@@ -93,16 +104,17 @@ Store.subscribe('token', async (token) => {
         localStorage.setItem('token', token);
         authSec.style.display = 'none';
         appSec.style.display = 'block';
-        
-        // Synchronize and render the active tab UI
+
+        // Ensure a valid tab is set; this no-ops if already 'matches'.
         Store.set('activeTab', Store.get('activeTab') || 'matches');
-        
+
         showOverlay();
         await fetchCurrentUser();
         await refreshDashboardData();
         hideOverlay();
     }
-});
+}
+Store.subscribe('token', handleAuthState);
 
 // B. User Details Listener: updates user header elements
 Store.subscribe('user', (user) => {
@@ -385,8 +397,7 @@ function renderMatchesList() {
                 saveBtn.disabled = true;
                 const homePred = parseInt(hVal.textContent);
                 const awayPred = parseInt(aVal.textContent);
-                
-                showOverlay();
+
                 try {
                     const res = await fetch(`/api/matches/${m.id}/predict`, {
                         method: 'POST',
@@ -399,11 +410,14 @@ function renderMatchesList() {
                             predicted_away_goals: awayPred
                         })
                     });
-                    
+
                     if (res.ok) {
+                        const saved = await res.json();
                         showToast("Prediction saved!", "success");
-                        // Fetch matches and profile again to update reactive lists
-                        await fetchMatches();
+                        // Patch the cached match in-place; no full refetch needed.
+                        m.user_prediction = saved;
+                        saveBtn.textContent = 'Update Prediction';
+                        // Only the profile's total_predictions count changed.
                         await fetchProfile();
                     } else {
                         const err = await res.json();
@@ -414,7 +428,6 @@ function renderMatchesList() {
                     showToast("Server connection error", "danger");
                     saveBtn.disabled = false;
                 }
-                hideOverlay();
             };
         }
         
@@ -830,12 +843,10 @@ async function fetchProfile() {
 }
 
 async function refreshDashboardData() {
-    await fetchLeaderboard();
-    await fetchProfile();
-    // Default load matches list
-    if (Store.get('activeTab') === 'matches') {
-        await fetchMatches();
-    }
+    // Leaderboard, profile, and matches are independent — fetch in parallel.
+    const fetches = [fetchLeaderboard(), fetchProfile()];
+    if (Store.get('activeTab') === 'matches') fetches.push(fetchMatches());
+    await Promise.all(fetches);
 }
 
 function clearActiveIntervals() {
@@ -899,7 +910,7 @@ function setupAppEvents() {
     }
 
     document.getElementById('input-search').oninput = (e) => {
-        Store.set('searchQuery', e.target.value);
+        debouncedSetSearch(e.target.value);
     };
     
     // Admin buttons
@@ -1036,12 +1047,8 @@ function showToast(message, type = 'info') {
 window.activeIntervals = [];
 document.addEventListener('DOMContentLoaded', async () => {
     setupAppEvents();
-    
-    // Check initial auth status (reactive trigger via Store)
-    const initialToken = Store.get('token');
-    if (initialToken) {
-        Store.set('token', initialToken); // triggers token subscriber check
-    } else {
-        Store.set('token', null);
-    }
+
+    // Bootstrap auth UI directly. Going through Store.set would be skipped by
+    // the equality short-circuit when the initial token already matches state.
+    await handleAuthState(Store.get('token'));
 });

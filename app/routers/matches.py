@@ -1,10 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
+import time
 from app import database, models, schemas, crud, auth, tournament
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
+
+# Cache the external API sync so /api/matches doesn't block on a network call
+# on every page load. Re-sync at most every SYNC_TTL_SECONDS.
+SYNC_TTL_SECONDS = 300  # 5 minutes
+_last_sync_monotonic = 0.0
+
+
+def _run_sync_and_mark():
+    """Background-safe sync that opens its own session and stamps the cache."""
+    global _last_sync_monotonic
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        tournament.sync_matches_from_api(db)
+        _last_sync_monotonic = time.monotonic()
+    except Exception as e:
+        print(f"Background sync_matches_from_api failed: {e}")
+    finally:
+        db.close()
+
+
+def _ensure_fresh_sync(background_tasks: BackgroundTasks):
+    """Trigger a background sync if the cache is stale; never block the response."""
+    if time.monotonic() - _last_sync_monotonic > SYNC_TTL_SECONDS:
+        background_tasks.add_task(_run_sync_and_mark)
 
 def get_current_time():
     """Helper to consistently get UTC time for kickoff comparisons."""
@@ -29,16 +55,14 @@ def compute_prediction_status(match: models.Match, current_time: datetime) -> st
 
 @router.get("", response_model=List[schemas.MatchResponse])
 def get_matches_endpoint(
+    background_tasks: BackgroundTasks,
     round_filter: Optional[str] = None,
     db: Session = Depends(database.get_db),
     current_user: Optional[models.User] = Depends(get_optional_user)
 ):
-    # Sync matches from API to keep database updated in real-time
-    try:
-        tournament.sync_matches_from_api(db)
-    except Exception as e:
-        print(f"Failed to sync matches from API on request: {e}")
-        
+    # Schedule a background sync if the external cache is stale — never block.
+    _ensure_fresh_sync(background_tasks)
+
     current_time = get_current_time()
     query = db.query(models.Match)
     
