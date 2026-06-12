@@ -519,31 +519,36 @@ function renderBracketTree() {
 }
 
 function renderLeaderboardTable() {
-    const body = document.getElementById('leaderboard-table-body');
-    body.innerHTML = '';
-    
+    const container = document.getElementById('leaderboard-table-body');
+    // Using container as a wrapper for cards
+    container.innerHTML = '';
+
     const lb = Store.get('leaderboard');
     const user = Store.get('user');
-    
+
     if (lb.length === 0) {
-        body.innerHTML = '<tr><td colspan="5" class="no-data">No data.</td></tr>';
+        container.innerHTML = '<div class="no-data">No data.</div>';
         return;
     }
-    
+
     lb.forEach(row => {
-        const tr = document.createElement('tr');
-        if (user && row.username === user.username) {
-            tr.className = 'active-user-row';
-        }
-        
-        tr.innerHTML = `
-            <td><strong>${row.rank}</strong></td>
-            <td>${row.username} ${user && row.username === user.username ? '<span class="badge open" style="font-size:0.6rem">You</span>' : ''}</td>
-            <td>${row.exact_predictions}</td>
-            <td>${row.total_predictions}</td>
-            <td><strong style="color:var(--success)">${row.total_points}</strong></td>
+        const card = document.createElement('div');
+        card.className = `leaderboard-card ${user && row.username === user.username ? 'active-user-row' : ''}`;
+
+        card.innerHTML = `
+            <div class="lb-rank">${row.rank}</div>
+            <div class="lb-user">${row.username} ${user && row.username === user.username ? '<span class="badge open" style="font-size:0.6rem">You</span>' : ''}</div>
+            <div style="text-align: center;">
+                <small style="color:var(--text-muted); display:block; font-size:0.6rem;">Exact</small>
+                <strong>${row.exact_predictions}</strong>
+            </div>
+            <div style="text-align: center;">
+                <small style="color:var(--text-muted); display:block; font-size:0.6rem;">Total</small>
+                <strong>${row.total_predictions}</strong>
+            </div>
+            <div class="lb-pts">${row.total_points} pts</div>
         `;
-        body.appendChild(tr);
+        container.appendChild(card);
     });
 }
 
@@ -652,7 +657,9 @@ async function renderAdminConsole() {
     body.innerHTML = '';
     
     try {
-        const res = await fetch('/api/matches');
+        const res = await fetch('/api/matches', {
+            headers: { 'Authorization': `Bearer ${Store.get('token')}` }
+        });
         if (!res.ok) return;
         const matches = await res.json();
         
@@ -868,7 +875,29 @@ function setupAppEvents() {
             Store.set('filterRound', btn.getAttribute('data-filter'));
         };
     });
-    
+
+    // Theme toggle
+    const themeBtn = document.getElementById('btn-theme-toggle');
+    themeBtn.onclick = () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('theme', 'light');
+            themeBtn.querySelector('i').className = 'fa-solid fa-moon';
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+            themeBtn.querySelector('i').className = 'fa-solid fa-sun';
+        }
+    };
+
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.querySelector('i').className = 'fa-solid fa-sun';
+    }
+
     document.getElementById('input-search').oninput = (e) => {
         Store.set('searchQuery', e.target.value);
     };

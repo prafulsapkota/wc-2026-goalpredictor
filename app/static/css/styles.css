@@ -34,6 +34,19 @@
     --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
     --shadow-md: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
     --shadow-hover: 0 4px 12px 0 rgba(60,64,67,0.15);
+    /* Gradients */
+    --primary-gradient: linear-gradient(135deg, #1a73e8 0%, #4285F4 100%);
+    --success-gradient: linear-gradient(135deg, #34a853 0%, #10b981 100%);
+}
+
+:root[data-theme="dark"] {
+    --bg-main: #121212;
+    --bg-card: #1e1e1e;
+    --bg-input: #2c2c2c;
+    --border-color: #333333;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-muted: #757575;
 }
 
 /* Reset and Global Styles */
@@ -71,24 +84,21 @@ a:hover {
 /* ==========================================================================
    Buttons and Badges (Google Design Language)
    ========================================================================== */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 24px;
-    font-family: var(--font-family-title);
-    font-size: 0.9rem;
-    font-weight: 500;
-    border-radius: var(--radius-pill);
-    cursor: pointer;
-    transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
-    text-align: center;
-    border: none;
-    outline: none;
-    color: white;
+.btn, .counter-btn, .submit-prediction-btn, a {
+    transition: all 0.2s ease-in-out;
 }
-.btn:active {
-    transform: scale(0.98);
+
+.counter-btn:hover:not(:disabled) {
+    background-color: #f1f3f4;
+    color: var(--text-primary);
+    transform: scale(1.05);
+}
+
+.menu-tab.active {
+    background: rgba(26, 115, 232, 0.1);
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    border-radius: var(--radius-pill) var(--radius-pill) 0 0;
 }
 
 .primary-btn {
@@ -605,15 +615,20 @@ a:hover {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-large);
-    padding: 20px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    transition: box-shadow 0.2s, border-color 0.2s;
+    gap: 18px;
+    transition: all 0.3s ease;
 }
-.match-card:hover {
-    box-shadow: var(--shadow-hover);
-    border-color: var(--border-color);
+.match-card.completed {
+    opacity: 0.75;
+    cursor: default;
+}
+.match-card:not(.completed):hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px 0 rgba(26, 115, 232, 0.2);
+    border-color: var(--primary);
 }
 
 .match-card-top-header {
@@ -647,10 +662,10 @@ a:hover {
 .match-card-main-grid {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
-    gap: 16px;
-    border-top: 1px solid #f1f3f4;
-    border-bottom: 1px solid #f1f3f4;
-    padding: 16px 0;
+    gap: 24px;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 20px 0;
 }
 .match-card-left-panel {
     display: flex;
@@ -918,47 +933,28 @@ a:hover {
     color: var(--primary);
 }
 
-/* ==========================================================================
-   Data Tables (Leaderboard, Admin)
-   ========================================================================== */
-.table-container {
+.leaderboard-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-large);
-    overflow: hidden;
-    box-shadow: none;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
 }
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
+.leaderboard-card:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--primary);
 }
-.data-table th {
-    padding: 14px 20px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--bg-main);
-    letter-spacing: 0.5px;
-}
-.data-table td {
-    padding: 14px 20px;
-    border-bottom: 1px solid #f1f3f4;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-}
-.data-table tbody tr:hover {
-    background-color: #f8f9fa;
-}
-.data-table tbody tr.active-user-row {
-    background-color: rgba(26, 115, 232, 0.05);
+.leaderboard-card.active-user-row {
     border-left: 4px solid var(--primary);
+    background: rgba(26, 115, 232, 0.05);
 }
-.data-table tbody tr.active-user-row td {
-    font-weight: 500;
-}
+.lb-rank { font-weight: 700; font-size: 1.1rem; color: var(--text-primary); }
+.lb-user { font-weight: 500; }
+.lb-pts { font-weight: 700; color: var(--success); }
 
 /* ==========================================================================
    Profile and Stats View
@@ -995,10 +991,11 @@ a:hover {
     letter-spacing: 0.5px;
 }
 .stat-value {
-    font-size: 1.8rem;
-    font-weight: 400;
+    font-size: 2.2rem;
+    font-weight: 600;
     font-family: var(--font-family-title);
     color: var(--primary);
+    line-height: 1.2;
 }
 
 .profile-history-section h2 {
@@ -1126,12 +1123,18 @@ a:hover {
     top: 90px;
 }
 .standing-sidebar-card {
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-large);
     padding: 24px;
     box-shadow: none;
-    transition: box-shadow 0.2s;
+    transition: all 0.3s ease;
+}
+
+:root[data-theme="dark"] .standing-sidebar-card {
+    background: rgba(30, 30, 30, 0.8);
 }
 .standing-sidebar-card:hover {
     box-shadow: var(--shadow-hover);
@@ -1221,9 +1224,15 @@ a:hover {
 }
 .progress-bar-fill {
     height: 100%;
-    background: var(--primary);
+    background: var(--primary-gradient);
     border-radius: 3px;
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sparkline-svg path {
+    fill: none;
+    stroke: var(--success-gradient);
+    stroke-width: 2.5;
 }
 .sparkline-placeholder {
     width: 100%;
