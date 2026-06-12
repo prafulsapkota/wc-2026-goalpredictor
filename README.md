@@ -21,7 +21,7 @@ A modern, containerized **FastAPI + SQLite + Jinja2** web application that allow
     2.  *Number of Exact (10 pts) Predictions* (Descending)
     3.  *Username* (Alphabetical)
 *   **🛠️ Admin Panel**: Admins can trigger manual syncs, edit scores manually for any match, and recalculate points for all predictions instantly.
-*   **🐳 Dockerized Deployment**: Built-in [Dockerfile](file:///home/prafulsapkota/worldcup/Dockerfile) and [docker-compose.yml](file:///home/prafulsapkota/worldcup/docker-compose.yml) configurations with a persistent SQLite volume.
+*   **🐳 Dockerized Deployment**: Built-in [Dockerfile](file://worldcup/Dockerfile) and [docker-compose.yml](file:///worldcup/docker-compose.yml) configurations with a persistent SQLite volume.
 
 ---
 
@@ -67,7 +67,7 @@ worldcup/
 
 1.  **Clone or navigate** to the project directory:
     ```bash
-    cd /home/prafulsapkota/worldcup
+    cd /worldcup
     ```
 
 2.  **Create and activate a virtual environment**:
@@ -82,7 +82,7 @@ worldcup/
     ```
 
 4.  **Set up Environment Variables**:
-    Create or edit the local [.env](file:///home/prafulsapkota/worldcup/.env) file:
+    Create or edit the local [.env](file://worldcup/.env) file:
     ```ini
     DATABASE_URL=sqlite:///./predictor.db
     SECRET_KEY=super_secret_world_cup_predictor_key_123456789
